@@ -21,6 +21,9 @@ import {
   sendSolana,
   sendSpl,
   swapExecute,
+  createAgentKey,
+  signMessage,
+  ensureGas,
   type SupportedChain,
   type EvmChain,
   type QuoteRequest,
@@ -409,6 +412,91 @@ export function registerTools(server: McpServer) {
     async (input) => {
       try {
         return ok(await sendSpl(loadConfig(), input as never));
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "hydra_create_agent_key",
+    {
+      description:
+        "Mint NEAR function-call access keys scoped to specific contracts (with a NEAR allowance cap) for autonomous agent use. Generates one fresh ed25519 keypair per receiverContract (NEAR's protocol allows only one access key per public_key, so multi-contract requests yield multiple keypairs). dry=true returns the plan + the new public keys without writing to chain. dry=false adds the keys and returns the private keys ONCE — save them immediately.",
+      inputSchema: {
+        receiverContracts: z
+          .array(z.string())
+          .min(1)
+          .describe("NEAR account IDs the key may call (e.g. 'v1.signer' for Chain Signatures)"),
+        methods: z
+          .array(z.string())
+          .default([])
+          .describe("Method allowlist on each contract. Empty = any method."),
+        allowanceYocto: z
+          .string()
+          .describe("Gas allowance cap per key, in yoctoNEAR. e.g. '1000000000000000000000000' = 1 NEAR"),
+        dry: z.boolean().default(true),
+      },
+    },
+    async (input) => {
+      try {
+        return ok(await createAgentKey(loadConfig(), input as never));
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "hydra_sign_message",
+    {
+      description:
+        "Sign an arbitrary message (EIP-191 'personal_sign') or EIP-712 typed data from a Chain-Signature-derived address. EVM chains return a 65-byte 0x... signature; Solana returns a base58 Ed25519 signature. Unlocks Sign-In-With-Ethereum / Sign-In-With-Solana / EIP-712 typed-data signing for any dApp that takes (address, signature). Bitcoin (BIP-322) is not yet supported.",
+      inputSchema: {
+        chain: ChainEnum,
+        predecessor: z.string().optional(),
+        path: z.string().optional(),
+        message: z.string().optional().describe("UTF-8 message for EIP-191 or Solana Ed25519"),
+        typedData: z
+          .record(z.unknown())
+          .optional()
+          .describe("EIP-712 typed data object: { domain, types, primaryType, message }. EVM only."),
+      },
+    },
+    async (input) => {
+      try {
+        return ok(await signMessage(loadConfig(), input as never));
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "hydra_ensure_gas",
+    {
+      description:
+        "Top up the derived foreign-chain address with native gas, via a small NEAR Intents 1Click swap. Checks current balance; if below minBalance, swaps a NEAR-side asset (default wNEAR) to the chain's native asset, sends to the derived address, polls until delivered. SAFE: dry=true returns the plan without spending. Bitcoin reports balance only (no gas concept). Aurora not supported (no omft bridge).",
+      inputSchema: {
+        chain: ChainEnum,
+        predecessor: z.string().optional(),
+        path: z.string().optional(),
+        minBalance: z
+          .string()
+          .optional()
+          .describe("Target minimum balance in chain's base units. Defaults to GAS_DEFAULTS."),
+        sourceAsset: z
+          .string()
+          .default("nep141:wrap.near")
+          .describe("NEAR-side asset to swap from (must be nep141:*.near, not omft-bridged)"),
+        timeoutMs: z.number().int().positive().default(120_000),
+        pollIntervalMs: z.number().int().positive().default(4_000),
+        dry: z.boolean().default(true),
+      },
+    },
+    async (input) => {
+      try {
+        return ok(await ensureGas(loadConfig(), input as never));
       } catch (e) {
         return fail(e);
       }

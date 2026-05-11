@@ -1,6 +1,6 @@
 # Tool Reference
 
-All 17 MCP tools `near-hydra` registers, with input fields, outputs, and notes. CLI subcommands mirror these one-to-one.
+All 21 MCP tools and 4 MCP resources `near-hydra` registers, with input fields, outputs, and notes. CLI subcommands mirror tools one-to-one.
 
 Conventions:
 - 🔍 = read-only (safe by default)
@@ -211,6 +211,53 @@ Pre-conditions: derived address must hold ≥ `amount` of the SPL token in its s
 
 ---
 
+## ✏️ hydra_create_agent_key
+
+Mint NEAR function-call access keys scoped to specific contracts (with a NEAR allowance cap). Use to give an autonomous agent a key it can only spend gas with and only call specific contracts — never a full-access key.
+
+**Input:** `{ receiverContracts: string[], methods?: string[], allowanceYocto: string, dry?: boolean }`
+
+One fresh `ed25519` keypair is generated per `receiverContract` (NEAR allows only one access key per public_key, so multiple contracts require multiple keypairs). `methods: []` means "any method on that contract."
+
+**Output (dry):** `{ dry: true, plan: { kind: "create_agent_key", accountId, existingKeyCount, allowanceYocto, methods, keys: [{ contractId, publicKey }] } }`
+**Output (broadcast):** `{ dry: false, plan, warning, keys: [{ contractId, publicKey, privateKey, methods, txHash }] }`
+
+**The `privateKey` field is shown ONCE on broadcast. Save it immediately.**
+
+---
+
+## ✏️ hydra_sign_message
+
+Sign an arbitrary message (EIP-191 `personal_sign`) or EIP-712 typed data from a Chain-Signature-derived address. Used for Sign-In-With-Ethereum / Sign-In-With-Solana / EIP-712 typed data / Permit2 approvals.
+
+**Input:** `{ chain: SupportedChain, predecessor?: string, path?: string, message?: string, typedData?: TypedDataDefinition }`
+
+For EVM chains: pass `message` (EIP-191) or `typedData` (EIP-712). Returns a 65-byte `0x...` signature.
+For Solana: pass `message`. Returns a base58-encoded Ed25519 signature.
+For Bitcoin: throws (BIP-322 not yet supported).
+
+**Output:** `{ chain, address, scheme: "eip191"|"eip712"|"ed25519", signature, digestHex?, recoveredAddress? }`
+
+For EVM, the signature is recovered locally to verify it matches the derived address; if the canonical `v` (27/28) doesn't recover, `v` is flipped and reverified before return.
+
+---
+
+## ✏️ hydra_ensure_gas
+
+Top up a derived foreign-chain address with native gas via NEAR Intents 1Click. Checks current balance; if below `minBalance`, swaps a NEAR-side asset (default wNEAR) to the chain's native asset, sends to the derived address, polls until delivered.
+
+**Input:** `{ chain, predecessor?, path?, minBalance?, sourceAsset?, timeoutMs?, pollIntervalMs?, dry?: boolean }`
+
+`sourceAsset` must be a NEAR-side `nep141:*.near` asset, not an `omft.near` foreign-bridged asset. Default `nep141:wrap.near`.
+
+`minBalance` defaults to a per-chain `GAS_DEFAULTS` value tuned for ~10 typical transactions.
+
+**Output:** `{ dry, alreadyFunded, address, currentBalance, targetMinimum, finalBalance?, plan?, swap? }`
+
+Bitcoin special case: reports balance only (no "gas" concept — UTXOs are the value). Aurora is currently not supported (no omft bridge).
+
+---
+
 ## ✏️ hydra_swap_execute
 
 End-to-end cross-chain swap. Auto-routes the origin send by parsing `originAsset`:
@@ -253,7 +300,25 @@ near-hydra send evm -c <chain> --to <addr> [--value-wei ... | --erc20-token ... 
 near-hydra send btc <to> <satoshi> [--broadcast]
 near-hydra send sol <to> <lamports> [--broadcast]
 near-hydra send spl <mint> <to> <amount> [--decimals N] [--broadcast]
+near-hydra key create-agent --receiver <id> [--methods <m,m>] --allowance-yocto <y> [--broadcast]
+near-hydra sign-message -c <chain> -m <utf8>            # or --typed-data <json>
+near-hydra ensure-gas -c <chain> [--min-balance ...] [--source-asset ...] [--broadcast]
 near-hydra call <contractId> <method> [-a <jsonArgs>] [--deposit-yocto ...] [--gas ...] [--broadcast]
 ```
 
 CLI defaults to dry-run for every signing command. Pass `--broadcast` to actually send.
+
+---
+
+## MCP Resources
+
+In addition to tools, `near-hydra-mcp` exposes four [MCP resources](https://modelcontextprotocol.io/docs/concepts/resources). MCP clients that read resources at session start (Claude Code, Cursor) get the static context for free without spending tool calls.
+
+| URI | Contents |
+|---|---|
+| `near-hydra://chains` | Supported chains + default derivation paths |
+| `near-hydra://tokens` | 1Click-supported swap tokens (cached 5 min) |
+| `near-hydra://config` | Active configuration (network, MPC contract, RPC endpoints — no private keys) |
+| `near-hydra://policy` | Active safety policy (`readOnly`, value caps) |
+
+All four return `application/json`. The `tokens` resource is per-`(baseUrl, apiKey)` cached for 5 minutes.

@@ -1,6 +1,6 @@
 {
   "name": "near-hydra",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Unified CLI + MCP server for NEAR — accounts, Chain Signatures, NEAR Intents — for humans and AI agents.",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,7 +23,7 @@
   "keywords": ["near", "near-protocol", "cli", "chain-signatures", "near-intents", "multichain", "cross-chain", "blockchain", "ai-agents"],
   "license": "Apache-2.0",
   "dependencies": {
-    "near-hydra-core": "0.4.0",
+    "near-hydra-core": "0.5.0",
     "commander": "^12.1.0"
   }
 }

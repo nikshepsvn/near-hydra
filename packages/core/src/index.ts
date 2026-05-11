@@ -5,3 +5,7 @@ export * from "./intents.js";
 export * from "./policy.js";
 export * from "./sends.js";
 export * from "./swap-execute.js";
+export * from "./agent-key.js";
+export * from "./sign-message.js";
+export * from "./ensure-gas.js";
+export * from "./resources.js";

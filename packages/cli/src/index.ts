@@ -21,6 +21,9 @@ import {
   sendSolana,
   sendSpl,
   swapExecute,
+  createAgentKey,
+  signMessage,
+  ensureGas,
   type SupportedChain,
   type EvmChain,
   type QuoteRequest,
@@ -465,6 +468,111 @@ swap
             refundTo: opts.refundTo,
             swapType: opts.swapType as never,
             slippageTolerance: Number(opts.slippageBps),
+            dry: !opts.broadcast,
+          }),
+        );
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
+
+const key = program.command("key").description("NEAR access-key operations");
+key
+  .command("create-agent")
+  .description("Mint scoped function-call access keys for an autonomous agent")
+  .option(
+    "--receiver <id...>",
+    "Contracts the key may call (repeat: --receiver v1.signer --receiver wrap.near)",
+  )
+  .option("--methods <m...>", "Method allowlist (empty = any). Repeat or comma-separate.")
+  .requiredOption("--allowance-yocto <y>", "Gas cap per key, in yoctoNEAR")
+  .option("--broadcast", "Actually add the keys (default is dry-run)")
+  .action(
+    async (opts: {
+      receiver?: string[];
+      methods?: string[];
+      allowanceYocto: string;
+      broadcast?: boolean;
+    }) => {
+      try {
+        const methods = (opts.methods ?? []).flatMap((m) => m.split(","));
+        out(
+          await createAgentKey(loadConfig(), {
+            receiverContracts: opts.receiver ?? [],
+            methods,
+            allowanceYocto: opts.allowanceYocto,
+            dry: !opts.broadcast,
+          }),
+        );
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
+
+program
+  .command("sign-message")
+  .description("Sign a message via Chain Signatures (EIP-191 or Solana Ed25519)")
+  .requiredOption("-c, --chain <chain>")
+  .option("-m, --message <msg>", "UTF-8 message (EIP-191 / Ed25519)")
+  .option("--typed-data <json>", "EIP-712 typed-data JSON (EVM only)")
+  .option("--predecessor <id>")
+  .option("--path <p>")
+  .action(
+    async (opts: {
+      chain: string;
+      message?: string;
+      typedData?: string;
+      predecessor?: string;
+      path?: string;
+    }) => {
+      try {
+        const typedData = opts.typedData ? JSON.parse(opts.typedData) : undefined;
+        out(
+          await signMessage(loadConfig(), {
+            chain: chainOpt(opts.chain),
+            message: opts.message,
+            typedData,
+            predecessor: opts.predecessor,
+            path: opts.path,
+          }),
+        );
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
+
+program
+  .command("ensure-gas")
+  .description("Top up a derived foreign-chain address with native gas via 1Click")
+  .requiredOption("-c, --chain <chain>")
+  .option("--min-balance <baseUnits>")
+  .option("--source-asset <assetId>", "Default: nep141:wrap.near")
+  .option("--timeout-ms <n>", "Default: 120000")
+  .option("--predecessor <id>")
+  .option("--path <p>")
+  .option("--broadcast", "Actually fund (default is dry-run)")
+  .action(
+    async (opts: {
+      chain: string;
+      minBalance?: string;
+      sourceAsset?: string;
+      timeoutMs?: string;
+      predecessor?: string;
+      path?: string;
+      broadcast?: boolean;
+    }) => {
+      try {
+        out(
+          await ensureGas(loadConfig(), {
+            chain: chainOpt(opts.chain),
+            minBalance: opts.minBalance,
+            sourceAsset: opts.sourceAsset,
+            timeoutMs: opts.timeoutMs ? Number(opts.timeoutMs) : undefined,
+            predecessor: opts.predecessor,
+            path: opts.path,
             dry: !opts.broadcast,
           }),
         );

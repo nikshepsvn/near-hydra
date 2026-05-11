@@ -22,6 +22,9 @@ const EXPECTED = [
   "hydra_send_btc",
   "hydra_send_solana",
   "hydra_send_spl",
+  "hydra_create_agent_key",
+  "hydra_sign_message",
+  "hydra_ensure_gas",
   "hydra_swap_execute",
 ];
 

@@ -1,6 +1,6 @@
 {
   "name": "near-hydra-core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Core library for near-hydra: NEAR client, Chain Signatures wrappers, NEAR Intents 1Click client.",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,6 +33,7 @@
     "@near-js/utils": "^2.2.4",
     "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.95.0",
+    "bs58": "^5.0.0",
     "chainsig.js": "^1.1.14",
     "viem": "^2.21.0"
   }

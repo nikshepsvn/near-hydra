@@ -33,7 +33,7 @@ npx -y near-hydra account balance-all near
 
 Returns ten real chain addresses + balances derived from the NEAR account `near`. No config file, no key, no signup. Defaults to read-only mainnet. Requires Node ≥ 20.
 
-**Latest release:** [v0.4.0](https://github.com/nikshepsvn/near-hydra/releases/tag/v0.4.0) (Solana SPL support).
+**Latest release:** [v0.5.0](https://github.com/nikshepsvn/near-hydra/releases/tag/v0.5.0) (agent key generator, message signing, MCP resources, ensure-gas).
 
 ## What you can do, in two lines
 
@@ -185,7 +185,7 @@ The same flow works EVM-origin: pass `nep141:eth-0x...omft.near` as `--from` and
 
 ---
 
-## Tools (18 total)
+## Tools (21 total)
 
 ### Read-only — safe by default
 
@@ -214,6 +214,9 @@ The same flow works EVM-origin: pass `nep141:eth-0x...omft.near` as `--from` and
 | `hydra_send_solana` | Send native SOL via Chain Signatures |
 | `hydra_send_spl` | Send a Solana SPL token via Chain Signatures (auto-creates dest ATA) |
 | `hydra_swap_execute` | End-to-end cross-chain swap, auto-routed by origin chain |
+| `hydra_create_agent_key` | Mint scoped NEAR function-call access keys for an autonomous agent |
+| `hydra_sign_message` | Sign EIP-191 / EIP-712 / Ed25519 messages from a derived address |
+| `hydra_ensure_gas` | Top up a derived foreign-chain address with native gas via 1Click |
 
 Every signing tool throws unless `policy.readOnly = false`, and defaults `dry: true`. See [SECURITY.md](SECURITY.md).
 
@@ -318,9 +321,9 @@ Built on:
 | **v0.1** | Read-only across 10 chains; 1Click swap discovery |
 | **v0.2** | NEAR sends + contract writes; EVM send via Chain Signatures; NEAR-origin swap_execute; policy layer |
 | **v0.3** | BTC + native-Solana sends; swap_execute auto-routes 4 origin chains |
-| **v0.4** *(latest, on npm)* | Solana SPL token send (auto-creates dest ATA); SPL-origin swap_execute via real-mint lookup; Solana broadcast bug fix |
-| **v0.5** | Function-call access key generator (`hydra_create_agent_key`); arbitrary message signing (SIWE / SIWS via Chain Signatures); MCP resources for chains/tokens; auto-bootstrap gas via 1Click |
-| **v0.6** | Raw NEAR Intents (custom intents, solver-relay); Omnibridge; nep245 multi-token bridges; Shade Agent deploy/whitelist; NEP-366 meta-transactions |
+| **v0.4** | Solana SPL token send (auto-creates dest ATA); SPL-origin swap_execute via real-mint lookup; Solana broadcast bug fix |
+| **v0.5** *(latest, on npm)* | Function-call access key generator (`hydra_create_agent_key`); arbitrary message signing (`hydra_sign_message` — EIP-191/712/Ed25519); MCP resources for chains/tokens/config/policy; auto-bootstrap gas via 1Click (`hydra_ensure_gas`) |
+| **v0.6** | Raw NEAR Intents (custom intents, solver-relay); Omnibridge; nep245 multi-token bridges; Shade Agent deploy/whitelist; NEP-366 meta-transactions; opt-in `ensureGas: true` flag on existing send tools |
 | **v1.0** | Per-tool confirmations; allowlist enforcement; `hydra do "<natural language>"` goal verb |
 
 ---
@@ -336,7 +339,7 @@ Built on:
 | Bitte Protocol `make-agent` | ❌ | ❌ | publishing-only | Agent registry + AI wallet |
 | `chainsig.js` (lib) | ✅ | ❌ | ❌ | Cross-chain signing library |
 | `@defuse-protocol/intents-sdk` (lib) | ❌ | ✅ | ❌ | Intents library |
-| **`near-hydra`** | ✅ 10 chains | ✅ + auto-routing | ✅ 18 tools | All of NEAR's stack, composed |
+| **`near-hydra`** | ✅ 10 chains | ✅ + auto-routing | ✅ 21 tools + 4 resources | All of NEAR's stack, composed |
 
 We don't compete with these — we compose them. `near-hydra-core` depends on `chainsig.js`, the 1Click SDK, and the modular `@near-js/*` packages. The agent-ergonomic surface and the safety layer are what's new.
 

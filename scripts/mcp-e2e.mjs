@@ -63,7 +63,7 @@ async function run() {
   // the in-process registration test wired into CI alongside this stdio test.
   // We intentionally check ≥ a minimum here so adding a tool only requires
   // updating one file (smoke-tools.mjs).
-  const MIN_TOOLS = 18;
+  const MIN_TOOLS = 21;
   if (toolNames.length < MIN_TOOLS) {
     throw new Error(
       `Expected at least ${MIN_TOOLS} tools, got ${toolNames.length}: ${toolNames.join(", ")}`,
@@ -100,6 +100,27 @@ async function run() {
     throw new Error(`Unexpected derived BTC address: ${dText.slice(0, 200)}`);
   }
   console.log(`✓ hydra_address_derive(bitcoin, near) → ${dJson.address}`);
+
+  const resList = await call(6, "resources/list", {});
+  const resources = resList?.result?.resources ?? [];
+  const expectedResources = ["chains", "tokens", "config", "policy"];
+  for (const name of expectedResources) {
+    if (!resources.find((r) => r.name === name)) {
+      throw new Error(
+        `Missing resource '${name}'. Got: ${resources.map((r) => r.name).join(", ")}`,
+      );
+    }
+  }
+  console.log(`✓ resources/list returned ${resources.length} resources: ${resources.map((r) => r.name).join(", ")}`);
+
+  const chainsRead = await call(7, "resources/read", { uri: "near-hydra://chains" });
+  const chainsText = chainsRead?.result?.contents?.[0]?.text;
+  if (!chainsText) throw new Error("resources/read near-hydra://chains returned no content");
+  const chainsJson = JSON.parse(chainsText);
+  if (!Array.isArray(chainsJson.supported) || chainsJson.supported.length < 10) {
+    throw new Error(`Unexpected chains resource shape: ${chainsText.slice(0, 200)}`);
+  }
+  console.log(`✓ resources/read near-hydra://chains → ${chainsJson.supported.length} chains`);
 
   proc.kill();
   console.log("\n✓ MCP end-to-end test passed. Server speaks correct protocol; real LLM clients will work.");
